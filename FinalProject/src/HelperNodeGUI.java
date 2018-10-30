@@ -33,7 +33,7 @@ public class HelperNodeGUI extends JFrame{
 			peersLabel = new JLabel("Number of peers [P]: ");
 			peersLabel.setPreferredSize(new Dimension(200, 30));
 			
-			peersTF = new JTextField("100");
+			peersTF = new JTextField("5");
 			peersTF.setPreferredSize(new Dimension(200, 30));
 			
 			peersPanel.add(peersLabel);
@@ -47,7 +47,7 @@ public class HelperNodeGUI extends JFrame{
 			chunksLabel = new JLabel("N of chunks per peer [N]: ");
 			chunksLabel.setPreferredSize(new Dimension(200, 30));
 			
-			chunksTF = new JTextField("1000");
+			chunksTF = new JTextField("7");
 			chunksTF.setPreferredSize(new Dimension(200, 30));
 			
 			chunksPanel.add(chunksLabel);
@@ -61,7 +61,7 @@ public class HelperNodeGUI extends JFrame{
 			bitsLabel = new JLabel("Data chunk size [X]: ");
 			bitsLabel.setPreferredSize(new Dimension(200, 30));
 			
-			bitsTF = new JTextField("1000");
+			bitsTF = new JTextField("4");
 			bitsTF.setPreferredSize(new Dimension(200, 30));
 			
 			bitsPanel.add(bitsLabel);

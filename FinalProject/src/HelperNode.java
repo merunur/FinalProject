@@ -25,7 +25,7 @@ public class HelperNode extends Agent {
 			DFAgentDescription dfd = new DFAgentDescription();
 			dfd.setName(getAID());
 			ServiceDescription sd = new ServiceDescription();
-			sd.setType("helper-agent");
+			sd.setType("helperAgent");
 			sd.setName(getLocalName()+"-Helper Agent");
 			dfd.addServices(sd);
 			try {
@@ -64,24 +64,29 @@ public class HelperNode extends Agent {
 		helperNodeGUI.logTA.setText("System started");
 		helperNodeGUI.stopButton.setEnabled(true);
 	
-//		jade.core.Runtime runtime = jade.core.Runtime.instance();
-//		Profile profile = new ProfileImpl();
-//		profile.setParameter(Profile.MAIN_HOST, "localhost");
-//		AgentContainer container = runtime.createAgentContainer(profile);
-//        AgentController ag;
-//        
+		jade.core.Runtime runtime = jade.core.Runtime.instance();
+		Profile profile = new ProfileImpl();
+		profile.setParameter(Profile.MAIN_HOST, "localhost");
+		AgentContainer container = runtime.createAgentContainer(profile);
+        AgentController ag;
         
-//        for (int i = 0; i < Integer.parseInt(peersNum); i++) {
-//			try {
-//				ag = container.createNewAgent("PeerAgent" + (peersNumber+i), 
-//				                               "PeerAgent", 
-//				                               new Object[] {chunksNum, chunkSize, threshold});
-//				ag.start();
-//		
-//			} catch (StaleProxyException e) {
-//				e.printStackTrace();
-//			}
-//        }
+        for (int i = 1; i < Integer.parseInt(peersNum); i++) {
+			try {
+				ag = container.createNewAgent("PeerAgent" + (peersNumber+i), "PeerNode", new Object[] {peersNum, chunksNum, chunkSize, threshold});
+				ag.start();
+		
+			} catch (StaleProxyException ex) {
+				ex.printStackTrace();
+			}
+        }
+        
+        try {
+			ag = container.createNewAgent("PeerAgentWithGUI", "PeerNodeWithGUI", new Object[] {peersNum, chunksNum, chunkSize, threshold});
+			ag.start();
+	
+		} catch (StaleProxyException e) {
+			e.printStackTrace();
+		}
        
         peersNumber += Integer.parseInt(peersNum);
 	}
