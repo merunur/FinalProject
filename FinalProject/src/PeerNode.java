@@ -22,8 +22,7 @@ public class PeerNode extends Agent {
 	private int chunksNumberN, chunkSizeX, peersNum;
 	private short thresholdT;
 	private HashMap<BitVector, int[]> hmap;
-//	private HashMap<BitVector, int[]> hmap2;
-		
+
 	//launch agent automatically
 	protected void setup() {
 		System.out.println("Peer Agent "+getAID().getName()+" is ready to create peer agents");
@@ -106,12 +105,12 @@ public class PeerNode extends Agent {
 			}
 		}
 		return sumResult;
-		//return generateFakeRandomData();
 	}
 	
-	public void storeData(String data) {
-		System.out.println("Data received: "+data);
+	public int storeData(String data) {
+		//System.out.println("Data received: "+data);
 		BitVector datatoStore = new BitVector(data.length());
+		int storedChunksCounter = 0;
 		
 		for(int i=0; i< data.length(); i++) {
 			if(data.charAt(i) == '1') {
@@ -134,26 +133,24 @@ public class PeerNode extends Agent {
 					}
 				}
 				pairs.setValue(placeHolder);
+				storedChunksCounter++;
 			}
 			//System.out.println("address: "+getBitVector((BitVector)pairs.getKey())+" value is: "+ pairs.getValue());
 		}
 		
 		
-		System.out.println("\n"+getAID().getName());
-
-		Iterator<Map.Entry<BitVector, int[]>> it2 = hmap.entrySet().iterator();
-		while (it2.hasNext()) {
-			Map.Entry<BitVector, int[]> pairs2 = it2.next();
-			int[] counters = (int[])pairs2.getValue();
-			System.out.print("\naddress: "+getBitVector((BitVector)pairs2.getKey())+" value is: ");
-			for(int i=0; i<datatoStore.size(); i++ ) {
-				System.out.print(counters[i]);
-			} 
-			System.out.println();
-		}
-		
-		
-		
+		//System.out.println("\nPeer said he was: "+getAID().getName() + " and stored: [" + storedChunksCounter +"/"+chunksNumberN+"] chunks");
+//		Iterator<Map.Entry<BitVector, int[]>> it2 = hmap.entrySet().iterator();
+//		while (it2.hasNext()) {
+//			Map.Entry<BitVector, int[]> pairs2 = it2.next();
+//			int[] counters = (int[])pairs2.getValue();
+//			System.out.print("\naddress: "+getBitVector((BitVector)pairs2.getKey())+" value is: ");
+//			for(int i=0; i<datatoStore.size(); i++ ) {
+//				System.out.print(counters[i]);
+//			} 
+//			System.out.println();
+//		}
+		return storedChunksCounter;
 	}
 
 	public String getBitVector(BitVector v) {
@@ -180,22 +177,25 @@ public class PeerNode extends Agent {
 
 		public void action() {
 			int[] searchResult = new int[chunkSizeX];
+			int counterStoredChunks;
 
 			ACLMessage msg = receive();
 			if (msg != null) {
+				counterStoredChunks=0;
 				String command = msg.getContent();
 				if(msg.getPerformative() == ACLMessage.REQUEST) {
-					storeData(command);	
+					counterStoredChunks = storeData(command);
+					ACLMessage replyToStore = createMessage(ACLMessage.CONFIRM, counterStoredChunks+"", msg.getSender());
+					send(replyToStore);
 				}
-				else {
+				else if (msg.getPerformative() == ACLMessage.PROPOSE) {
 					//System.out.println("Peer received command to search for: " + command);
 					searchResult = searchData(command);
-					ACLMessage replyToQuery = createMessage(ACLMessage.PROPOSE, Arrays.toString(searchResult), msg.getSender());
-					send(replyToQuery);
+					ACLMessage replyToSearchQuery = createMessage(ACLMessage.INFORM, Arrays.toString(searchResult), msg.getSender());
+					send(replyToSearchQuery);
+					//System.out.println("data to search: "+ command);
 				}
-
-				//System.out.println("data received at: "+getAID().getLocalName());
-				
+	
 			} else {
 				block();
 			}

@@ -14,7 +14,7 @@ public class HelperNodeGUI extends JFrame{
 		JLabel peersLabel, chunksLabel, bitsLabel, thresholdLabel;
 		JTextField peersTF, chunksTF, bitsTF, thresholdTF;
 		JButton startButton, stopButton;
-		JTextArea logTA;
+		JTextArea logTA, searchLogTA;
 		
 		public HelperNodeGUI(HelperNode myAgent) {
 			super(myAgent.getLocalName());
@@ -126,6 +126,8 @@ public class HelperNodeGUI extends JFrame{
 			logTA.setPreferredSize(new Dimension(400, 40));
 			logTA.setBorder(BorderFactory.createEmptyBorder(5,3,3,3));
 			
+			
+			
 			//add all elements to main panel
 			mainPanel.add(peersPanel);
 			mainPanel.add(chunksPanel);
@@ -133,6 +135,7 @@ public class HelperNodeGUI extends JFrame{
 			mainPanel.add(thresholdPanel);
 			mainPanel.add(buttonsPanel);
 			mainPanel.add(logTA);
+			
 			mainPanel.setBorder(BorderFactory.createEmptyBorder(5,10,10,10));
 			
 			// "super" Frame sets to FlowLayout

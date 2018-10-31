@@ -30,6 +30,8 @@ public class PeerNodeWithGUI extends Agent{
 	private BitVector genData;
 	private Vector peerAgents = new Vector();
 	private String genDataString="";
+	private int searchIterateCounter=0;
+
 	
 	//launch agent automatically
 	protected void setup() {
@@ -111,14 +113,14 @@ public class PeerNodeWithGUI extends Agent{
 			if (genData.get(i)) 
 				genDataString+="1";                
 		      else 
-		    	  genDataString+="0"; 
+		    	genDataString+="0"; 
 		} 
 		
-		if(genDataString.length()<=30) {
+		if(genDataString.length()<=65) {
 			peerNodeGUI.dataTF.setText(genDataString);
 		}
 		else {
-			peerNodeGUI.dataTF.setText(genDataString.substring(0, 30)+"...");
+			peerNodeGUI.dataTF.setText(genDataString.substring(0, 65)+"...");
 			
 		}
 		
@@ -135,7 +137,7 @@ public class PeerNodeWithGUI extends Agent{
 
 			@Override
 			public void action() {
-
+				searchIterateCounter=0;
 				if (0 != genData.size()) {
 					int counter = peersNum;
 					for (int i=1; i<counter; i++) {
@@ -151,7 +153,7 @@ public class PeerNodeWithGUI extends Agent{
 					
 							}	
 					}
-					peerNodeGUI.logTA.append("Message sent\n");
+					peerNodeGUI.logTA.append("\nMessage sent\n");
 						
 						
 				} 
@@ -199,7 +201,8 @@ public class PeerNodeWithGUI extends Agent{
 					 
 							}	
 					}
-					peerNodeGUI.logTA.append("Message sent\n");
+					peerNodeGUI.logTA.append(genDataString+"\n");
+					
 				
 					
 				} 
@@ -225,64 +228,136 @@ public class PeerNodeWithGUI extends Agent{
 		private int step = 0;
 		private int repliesCounter = 0;	
 		private int[] replyIntArray = new int[chunkSizeX];
-
 		private int[] sumVector = new int[chunkSizeX];
-
-		private int[] binary = new int[chunkSizeX];
+		private int storedChunksCounter;
+		
 
 		public void action() {
+			BitVector binary = new BitVector(chunkSizeX);
+			BitVector bitStrSearch = genData;
+			String bitToString;
+			
 			switch (step) {
 				case 0:
 					ACLMessage msg = receive();
 					if (msg != null) {
-						System.out.println("\nReply#: " + repliesCounter);
-
 						String content = msg.getContent();
-						System.out.println("String received in jade msg:\n"+content);
-						replyIntArray = convertStringToArray(content);
-
-						System.out.println("Convert to int and add to SumVector: ");
-						for (int i=0; i<sumVector.length; i++) {
-							sumVector[i] += replyIntArray[i];
-							System.out.print(sumVector[i]+"\t");
-						}
+						//System.out.println("Peer["+repliesCounter+"] sent:\t"+content);
 						
-						repliesCounter++;
-						if (repliesCounter >= peersNum-1) {
-							step = 1;
+						if (msg.getPerformative() == ACLMessage.INFORM) {
+							
+							replyIntArray = convertStringToArray(content);
+							//System.out.println("Convert to int and add to SumVector: ");
+							for (int i=0; i<sumVector.length; i++) {
+								sumVector[i] += replyIntArray[i];
+								//System.out.print(sumVector[i]+"\t");
+							}
+							repliesCounter++;
+							if (repliesCounter >= peersNum-1) {
+								step = 1;
+							}
+							//System.out.println("\nProgress to step 1");
+							
+							
+						} else if (msg.getPerformative() == ACLMessage.CONFIRM){
+							repliesCounter++;
+							storedChunksCounter += Integer.parseInt(content);
+							if (repliesCounter >= peersNum-1) {
+								peerNodeGUI.logTA.append("Stored: ["+storedChunksCounter+"/"+(peersNum-1)*chunksNumberN+"]\n");
+								step = 0;
+								repliesCounter = 0;
+								storedChunksCounter = 0;
+							}
 						}
-						System.out.println();
-						
+				
 					} else {
 						block();
 					}
 					break;
 				case 1:
-					System.out.println("All replies received, time to process!");
+					//System.out.println("All replies received, time to process them!");
 					
 					// convert sumvector to binary format:
-					System.out.println("Converting SUMVECTOR to binary:");
+					//System.out.print("SUMVECTOR in binary: ");
 					for (int i=0; i< sumVector.length; i++) {
-						if (sumVector[i] < 0) {
-							binary[i] = 0;
-						} else {
-							binary[i] = 1;
+						if (sumVector[i] > 0) {
+							binary.set(i);
+						} else{
+							binary.clear(i);
 						}
-						System.out.print(binary[i] + "\t");
+						
 					}
+					//System.out.println(getBitVectorStr(binary));
+					
+					//System.out.println("\nHalf of Chunksize is "+chunkSizeX/2+" HammingDist is: " + hammingDistance(binary, bitStrSearch));
+					if (hammingDistance(binary, bitStrSearch) <= (chunkSizeX/2) && hammingDistance(binary, bitStrSearch)>0 && searchIterateCounter < chunksNumberN ) {
+						
+						peerNodeGUI.logTA.append(".");
+						// sent msg to all peers
+						int counter = peersNum;
+						for (int i=1; i<counter; i++) {
+							ACLMessage msgACL;
+							String guiagent = "PeerAgentWithGUI";
+							bitToString = getBitVectorStr(binary);
+							if (i==1 && getAID().getName()==guiagent) {
+								msgACL = createMessage(ACLMessage.PROPOSE, bitToString, new AID("PeerAgentWithGUI", AID.ISLOCALNAME));
+								// send(msgACL);
+							}
+							else {
+								msgACL = createMessage(ACLMessage.PROPOSE, bitToString, new AID("PeerAgent" + (counter-i), AID.ISLOCALNAME));
+								send(msgACL);
+						
+								}	
+						}
+						bitStrSearch = binary;
+						searchIterateCounter++;
+					}
+					else if(hammingDistance(binary, bitStrSearch) == 0) {
+						peerNodeGUI.logTA.append("yes, we have your data\n");
 
+						//System.out.println("sorry, we couldnt find your data");
+						
+					}
+					else {
+						//System.out.println("yes, we have your data");
+						peerNodeGUI.logTA.append("\nsorry, we couldnt find your data\n");
+
+					}
 					
-					
-					
-					for (int i = 0; i<sumVector.length; i++) {
-						sumVector[i] = 0;
+					bitStrSearch = genData;
+					for (int j = 0; j<sumVector.length; j++) {
+						sumVector[j] = 0;
 					}
 					step = 0;
 					repliesCounter = 0;
 					break;
-
 			}
 			
+		}
+		public String getBitVectorStr(BitVector v) {
+			String s="";
+			for (int i= 0; i < v.size(); i++) {
+				if (v.get(i)) 
+					s+="1";                
+				else 
+					s+="0";  
+			}
+			return s;
+		}
+		private ACLMessage createMessage (int mp, String content, AID dest) {
+			ACLMessage msgACL;
+			msgACL = new ACLMessage(mp);
+			msgACL.setContent(content);
+			msgACL.addReceiver(dest);
+			
+			return msgACL;
+			}
+		
+		public int hammingDistance(BitVector toStore, BitVector address) {
+			BitVector v1 = toStore.copy();
+			BitVector v2 = address.copy();
+			v1.xor(v2);	
+			return  v1.cardinality();
 		}
 
 

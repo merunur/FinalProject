@@ -26,7 +26,7 @@ public class PeerNodeGUI extends JFrame{
 			mainPanel.setLayout(boxlayoutY);
 			
 			dataLabel = new JLabel("Enter data or generate");
-			dataLabel.setPreferredSize(new Dimension(200, 30));
+			dataLabel.setPreferredSize(new Dimension(400, 30));
 			
 			// generate data chunk
 			generatePanel = new JPanel();
@@ -34,11 +34,11 @@ public class PeerNodeGUI extends JFrame{
 			generatePanel.setLayout(boxlayoutX);
 			
 			dataTF = new JTextField("data chunk");
-			dataTF.setEditable(false);
-			dataTF.setPreferredSize(new Dimension(200, 40));
+			dataTF.setEditable(true);
+			dataTF.setPreferredSize(new Dimension(400, 40));
 			
 			generateButton = new JButton("GENERATE");
-			generateButton.setPreferredSize(new Dimension(100, 40));
+			generateButton.setPreferredSize(new Dimension(200, 40));
 			
 			generateButton.addActionListener(new ActionListener() {
 	            public void actionPerformed(ActionEvent evt) {
@@ -73,9 +73,9 @@ public class PeerNodeGUI extends JFrame{
 	        });
 			
 			logTA = new JTextArea();
-			logTA.setEditable(false);
-			logTA.setPreferredSize(new Dimension(400, 40));
-			logTA.setBorder(BorderFactory.createEmptyBorder(10,0,0,0));
+			logTA.setEditable(true);
+			logTA.setPreferredSize(new Dimension(800, 600));
+			logTA.setBorder(BorderFactory.createEmptyBorder(6,6,6,6));
 			
 			buttonsPanel.add(searchButton);
 			buttonsPanel.add(storeButton);
@@ -85,11 +85,13 @@ public class PeerNodeGUI extends JFrame{
 			mainPanel.add(buttonsPanel);
 			mainPanel.add(logTA);
 			
+
+			
 			// "super" Frame sets to FlowLayout
 			setLayout(new FlowLayout());  
 			add(mainPanel);
 			setTitle("Peer Agent"); 
-		    setSize(500, 200); 					
+		    setSize(850, 800); 					
 			
 		}
 		
