@@ -1,5 +1,3 @@
-//PeerNodeWithGUI
-// data type SHORT is used instead of INT to reduce memory usage and increase system performance
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -7,9 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
-
 import javax.swing.JOptionPane;
-
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -21,6 +17,8 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import cern.colt.bitvector.BitVector;
+import java.io.*;
+import java.util.Arrays;
 
 public class PeerNodeWithGUI extends Agent{
 	
@@ -137,28 +135,25 @@ public class PeerNodeWithGUI extends Agent{
 
 			@Override
 			public void action() {
-				//String s = genData.toString() ;
-				//genDataString = peerNodeGUI.dataTF.getText();
-		
+
 				if (0 != genData.size()) {
 					int counter = peersNum;
-					
 					for (int i=1; i<counter; i++) {
 						ACLMessage msgACL;
 						String guiagent = "PeerAgentWithGUI";
 						if (i==1 && getAID().getName()==guiagent) {
-							 msgACL = createMessage(ACLMessage.PROPOSE, genDataString, new AID("PeerAgentWithGUI", AID.ISLOCALNAME));
+							msgACL = createMessage(ACLMessage.PROPOSE, genDataString, new AID("PeerAgentWithGUI", AID.ISLOCALNAME));
 							// send(msgACL);
 						}
 						else {
-							 msgACL = createMessage(ACLMessage.PROPOSE, genDataString, new AID("PeerAgent" + (counter-i), AID.ISLOCALNAME));
-							 send(msgACL);
-					 
+							msgACL = createMessage(ACLMessage.PROPOSE, genDataString, new AID("PeerAgent" + (counter-i), AID.ISLOCALNAME));
+							send(msgACL);
+					
 							}	
 					}
 					peerNodeGUI.logTA.append("Message sent\n");
-				
-					
+						
+						
 				} 
 				else {
 		
@@ -174,14 +169,13 @@ public class PeerNodeWithGUI extends Agent{
 				msgACL.addReceiver(dest);
 				
 				return msgACL;
-				}
-			});
-		
+			}
+		});
 	}
 	
 	
 	public void storeData() {
-			//store genData
+		//store genData
 		addBehaviour(new OneShotBehaviour() {
 
 			@Override
@@ -224,30 +218,104 @@ public class PeerNodeWithGUI extends Agent{
 				
 				return msgACL;
 				}
-			});
-		
-			
+		});	
 	}
 	
 	public class ReceiveMessage extends CyclicBehaviour {
+		private int step = 0;
+		private int repliesCounter = 0;	
+		private int[] replyIntArray = new int[chunkSizeX];
 
-	
+		private int[] sumVector = new int[chunkSizeX];
+
+		private int[] binary = new int[chunkSizeX];
+
 		public void action() {
-			ACLMessage msg = receive();
-			if (msg != null) {
+			switch (step) {
+				case 0:
+					ACLMessage msg = receive();
+					if (msg != null) {
+						System.out.println("\nReply#: " + repliesCounter);
 
-				String command = msg.getContent();
-				
-				System.out.println("data received: "+command);
-				
-				
-			} else {
-				block();
+						String content = msg.getContent();
+						System.out.println("String received in jade msg:\n"+content);
+						replyIntArray = convertStringToArray(content);
+
+						System.out.println("Convert to int and add to SumVector: ");
+						for (int i=0; i<sumVector.length; i++) {
+							sumVector[i] += replyIntArray[i];
+							System.out.print(sumVector[i]+"\t");
+						}
+						
+						repliesCounter++;
+						if (repliesCounter >= peersNum-1) {
+							step = 1;
+						}
+						System.out.println();
+						
+					} else {
+						block();
+					}
+					break;
+				case 1:
+					System.out.println("All replies received, time to process!");
+					
+					// convert sumvector to binary format:
+					System.out.println("Converting SUMVECTOR to binary:");
+					for (int i=0; i< sumVector.length; i++) {
+						if (sumVector[i] < 0) {
+							binary[i] = 0;
+						} else {
+							binary[i] = 1;
+						}
+						System.out.print(binary[i] + "\t");
+					}
+
+					
+					
+					
+					for (int i = 0; i<sumVector.length; i++) {
+						sumVector[i] = 0;
+					}
+					step = 0;
+					repliesCounter = 0;
+					break;
+
 			}
+			
 		}
+
+
+		public int[] convertStringToArray(String text) {
+			String cleanTxt = cleanString(text);
+			String[] splitStrings = cleanTxt.split(",");
+			int counter = 0;
+			
+			int[] intarray = new int[splitStrings.length];
+			int i=0;
+			for(String str:splitStrings){
+				try {
+					intarray[i]=Integer.parseInt(str);
+					i++;
+				} catch (NumberFormatException e) {
+					throw new IllegalArgumentException("Not a number: " + str + " at index " + i, e);
+				}
+			}
+			return intarray;
+			
+		}
+
+		public String cleanString(String toClean) {
+			String newStr = "";
+			for (int i=0; i<toClean.length(); i++) {
+				if ((toClean.charAt(i) != '[') && (toClean.charAt(i) != ']') && (toClean.charAt(i) != ' ')){
+					newStr += toClean.charAt(i);
+				}
+			}
+			return newStr;
+		}
+		
 	}
-	
-	
-	
-	
+
 }
+ 

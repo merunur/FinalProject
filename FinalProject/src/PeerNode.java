@@ -11,6 +11,11 @@ import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
+import java.util.Arrays;
+import jade.core.AID;
+import java.util.Random;
+
+
 
 public class PeerNode extends Agent {
 	
@@ -51,20 +56,6 @@ public class PeerNode extends Agent {
 		}
 		
 		
-	   // Register the master agent service in the yellow pages
-//		DFAgentDescription dfd = new DFAgentDescription();
-//		dfd.setName(getAID());
-//		ServiceDescription sd = new ServiceDescription();
-//		sd.setType("peerAgent");
-//		sd.setName(getLocalName()+"-Peer Agent");
-//		dfd.addServices(sd);
-//		try {
-//			DFService.register(this, dfd);
-//		}
-//		catch (FIPAException fe) {
-//			fe.printStackTrace();
-//		}
-		
 		addBehaviour(new ReceiveMessage());
 		
 	}
@@ -82,29 +73,40 @@ public class PeerNode extends Agent {
 			}
 			// Printout a dismissal message
 			System.out.println("Peer-agent "+getAID().getName()+"terminated.");
+	}
+
+
+	public int[] generateFakeRandomData() {
+		int[] returnArray = new int[chunkSizeX];
+		Random r = new Random();
+		int low = -10;
+		int high = 10;
+		for (int i=0; i<chunkSizeX; i++) {
+			returnArray[i] = r.nextInt(high-low) + low;
 		}
-	
-	public void searchData(String data) {
-		System.out.println("we will soon search your data");
-		BitVector datatoSearch = new BitVector(data.length());
-		int sumResult[] = (int[])new int[datatoSearch.size()];
-		// int [] sumResult -> to send back  - sum of all values of counters within threshold
-		// iterate through hashmap -> 
+		return returnArray;
+	}
+
+	public int[] searchData(String data) {
+		BitVector bitString = new BitVector(data.length());
+		int[] sumResult = new int[bitString.size()]; // -> to send back  - sum of all values of counters within threshold
 		
+		// iterate through hashmap -> 
 		Iterator<Map.Entry<BitVector, int[]>> it = hmap.entrySet().iterator();
 		while (it.hasNext()) {
-			Map.Entry<BitVector, int[]> pairs = it.next();
-			int placeHolder[] = (int[])pairs.getValue();
+			Map.Entry<BitVector,int[]> pairs = it.next();
+			BitVector currentAddress = (BitVector)pairs.getKey();
+			int[] countersArray;
 			
-			if(thresholdT >= hammingDistance(datatoSearch, (BitVector)pairs.getKey())) {
-				for(int i=0; i<datatoSearch.size(); i++ ) {
-				//	sumResult[i] 
+			if(thresholdT >= hammingDistance(bitString, currentAddress)) {
+				countersArray = (int[])pairs.getValue();
+				for(int i=0; i<bitString.size(); i++ ) {
+					sumResult[i] += countersArray[i];
 				}
-				pairs.setValue(placeHolder);
 			}
-			//System.out.println("address: "+getBitVector((BitVector)pairs.getKey())+" value is: "+ pairs.getValue());
 		}
-		
+		return sumResult;
+		//return generateFakeRandomData();
 	}
 	
 	public void storeData(String data) {
@@ -153,17 +155,18 @@ public class PeerNode extends Agent {
 		
 		
 	}
-	
+
 	public String getBitVector(BitVector v) {
-	String s="";
-	for (int i= 0; i < v.size(); i++) {
-        if (v.get(i)) 
-            s+="1";                
-        else 
-            s+="0";  
-    }
-	return s;
-}
+		String s="";
+		for (int i= 0; i < v.size(); i++) {
+			if (v.get(i)) 
+				s+="1";                
+			else 
+				s+="0";  
+		}
+		return s;
+	}
+
 	public int hammingDistance(BitVector toStore, BitVector address) {
 		BitVector v1 = toStore.copy();
 		BitVector v2 = address.copy();
@@ -172,11 +175,12 @@ public class PeerNode extends Agent {
 	}
 	
 	public class ReceiveMessage extends CyclicBehaviour {
-
 		private String Message_Content;
 		private String SenderName;
 
 		public void action() {
+			int[] searchResult = new int[chunkSizeX];
+
 			ACLMessage msg = receive();
 			if (msg != null) {
 				String command = msg.getContent();
@@ -184,15 +188,28 @@ public class PeerNode extends Agent {
 					storeData(command);	
 				}
 				else {
-					searchData(command);
+					//System.out.println("Peer received command to search for: " + command);
+					searchResult = searchData(command);
+					ACLMessage replyToQuery = createMessage(ACLMessage.PROPOSE, Arrays.toString(searchResult), msg.getSender());
+					send(replyToQuery);
 				}
-				
-				
+
 				//System.out.println("data received at: "+getAID().getLocalName());
 				
 			} else {
 				block();
 			}
 		}
+
+
+		private ACLMessage createMessage (int mp, String content, AID dest) {
+			ACLMessage msgACL;
+			msgACL = new ACLMessage(mp);
+			msgACL.setContent(content);
+			msgACL.addReceiver(dest);
+			
+			return msgACL;
+		}
+
 	}
 }
