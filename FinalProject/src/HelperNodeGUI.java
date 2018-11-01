@@ -8,6 +8,8 @@ import jade.wrapper.ControllerException;
 
 public class HelperNodeGUI extends JFrame{
 	
+		private static final long serialVersionUID = 1L;
+
 		private HelperNode helperAgent;
 		
 		JPanel mainPanel, peersPanel, chunksPanel, bitsPanel, thresholdPanel, buttonsPanel;
@@ -33,7 +35,7 @@ public class HelperNodeGUI extends JFrame{
 			peersLabel = new JLabel("Number of peers [P]: ");
 			peersLabel.setPreferredSize(new Dimension(200, 30));
 			
-			peersTF = new JTextField("5");
+			peersTF = new JTextField("20");
 			peersTF.setPreferredSize(new Dimension(200, 30));
 			
 			peersPanel.add(peersLabel);
@@ -47,7 +49,7 @@ public class HelperNodeGUI extends JFrame{
 			chunksLabel = new JLabel("N of chunks per peer [N]: ");
 			chunksLabel.setPreferredSize(new Dimension(200, 30));
 			
-			chunksTF = new JTextField("7");
+			chunksTF = new JTextField("50");
 			chunksTF.setPreferredSize(new Dimension(200, 30));
 			
 			chunksPanel.add(chunksLabel);
@@ -61,7 +63,7 @@ public class HelperNodeGUI extends JFrame{
 			bitsLabel = new JLabel("Data chunk size [X]: ");
 			bitsLabel.setPreferredSize(new Dimension(200, 30));
 			
-			bitsTF = new JTextField("4");
+			bitsTF = new JTextField("60");
 			bitsTF.setPreferredSize(new Dimension(200, 30));
 			
 			bitsPanel.add(bitsLabel);
@@ -76,7 +78,7 @@ public class HelperNodeGUI extends JFrame{
 			thresholdLabel = new JLabel("Threshold [T]: ");
 			thresholdLabel.setPreferredSize(new Dimension(200, 30));
 			
-			thresholdTF = new JTextField("2");
+			thresholdTF = new JTextField("28");
 			thresholdTF.setPreferredSize(new Dimension(200, 30));
 			
 			thresholdPanel.add(thresholdLabel);
@@ -85,9 +87,8 @@ public class HelperNodeGUI extends JFrame{
 			
 			//start button
 			startButton = new JButton("START");
-			startButton.setPreferredSize(new Dimension(200, 40));
+			startButton.setPreferredSize(new Dimension(120, 40));
 			startButton.setEnabled(true);
-			
 			startButton.addActionListener(new ActionListener() {
 	            public void actionPerformed(ActionEvent evt) {
 	            	String peersNum = peersTF.getText();
@@ -98,16 +99,14 @@ public class HelperNodeGUI extends JFrame{
 	             	try {
 	             		helperAgent.CreatePeerAgents(peersNum, chunksNum, chunkSize, threshold);
 					} catch (ControllerException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 	            }
 	        });
 			
 			stopButton = new JButton("STOP");
-			stopButton.setPreferredSize(new Dimension(200, 40));
+			stopButton.setPreferredSize(new Dimension(120, 40));
 			stopButton.setEnabled(false);
-			
 			stopButton.addActionListener(new ActionListener() {
 	            public void actionPerformed(ActionEvent evt) {
 	             	helperAgent.stopSystem();

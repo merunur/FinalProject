@@ -8,9 +8,13 @@ import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import jade.wrapper.ControllerException;
 import jade.wrapper.StaleProxyException;
+import jade.core.AID;
+import jade.lang.acl.ACLMessage;
+
 
 public class HelperNode extends Agent {
 	
+	// variable for storing the global GUI
 	private HelperNodeGUI helperNodeGUI;
 	private int peersNumber = 0;
 	
@@ -22,25 +26,25 @@ public class HelperNode extends Agent {
 		helperNodeGUI.showGUI();
 		 
 		// Register the master agent service in the yellow pages
-			DFAgentDescription dfd = new DFAgentDescription();
-			dfd.setName(getAID());
-			ServiceDescription sd = new ServiceDescription();
-			sd.setType("helperAgent");
-			sd.setName(getLocalName()+"-Helper Agent");
-			dfd.addServices(sd);
-			try {
-				DFService.register(this, dfd);
-			}
-			catch (FIPAException fe) {
-				fe.printStackTrace();
-			}
+		DFAgentDescription dfd = new DFAgentDescription();
+		dfd.setName(getAID());
+		ServiceDescription sd = new ServiceDescription();
+		sd.setType("helperAgent");
+		sd.setName(getLocalName()+"-Helper Agent");
+		dfd.addServices(sd);
+		try {
+			DFService.register(this, dfd);
+		}
+		catch (FIPAException fe) {
+			fe.printStackTrace();
+		}
 		
 	}
 	
 	// called to delete the agent
 	protected void takeDown() {
-		
-		if (helperNodeGUI != null) { // Dispose the GUI if it is there
+		// Dispose the GUI if it is there
+		if (helperNodeGUI != null) { 
 			helperNodeGUI.dispose();
 		}
 		
@@ -90,13 +94,23 @@ public class HelperNode extends Agent {
        
         peersNumber += Integer.parseInt(peersNum);
 	}
-	
+
+
 	public void stopSystem() {
-		
+		ACLMessage msgACL = new ACLMessage(ACLMessage.FAILURE);
+		// broadcast messages to all peers to shut down gracefully
+		for (int i = 1; i < peersNumber; i++) {
+			msgACL.addReceiver(new AID("PeerAgent" + i, AID.ISLOCALNAME));
+		}
+		// send the shutdown to the peer with GUI as well
+		msgACL.addReceiver(new AID("PeerAgentWithGUI", AID.ISLOCALNAME));
+		send(msgACL);
+
+		// fix buttons
 		helperNodeGUI.stopButton.setEnabled(false);
 		helperNodeGUI.logTA.setText("System stopped");
 		helperNodeGUI.startButton.setEnabled(true);
-		
-	}
 
+		peersNumber = 0;
+	}
 }

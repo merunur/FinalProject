@@ -2,7 +2,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
 import cern.colt.bitvector.BitVector;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -14,8 +13,6 @@ import jade.lang.acl.ACLMessage;
 import java.util.Arrays;
 import jade.core.AID;
 import java.util.Random;
-
-
 
 public class PeerNode extends Agent {
 	
@@ -43,25 +40,33 @@ public class PeerNode extends Agent {
 			int counters[]= new int[chunkSizeX];
 			
 			//generate random addresses and 0 counters
-			
 			for (int j = 0; j < chunkSizeX; j++) {
 				randAddresses.putQuick(j, Math.random() > .5);
 				counters[j]=0;
-	
 			}
-			
 			//put generated data into hashmap
 			hmap.put(randAddresses, counters);	
 		}
-		
-		
-		addBehaviour(new ReceiveMessage());
-		
+
+		// Register the peer agent service in the yellow pages
+		DFAgentDescription dfd = new DFAgentDescription();
+		dfd.setName(getAID());
+		ServiceDescription sd = new ServiceDescription();
+		sd.setType("peerAgent");
+		sd.setName(getLocalName()+"-Peer Agent");
+		dfd.addServices(sd);
+		try {
+			DFService.register(this, dfd);
+		}
+		catch (FIPAException fe) {
+			fe.printStackTrace();
+		}
+
+		addBehaviour(new ReceiveMessage());	
 	}
 	
 	// called to delete the agent
 	protected void takeDown() {
-
 			// Deregister agent from the Directory Facilitator 
 			try {
 				DFService.deregister(this);
@@ -72,18 +77,6 @@ public class PeerNode extends Agent {
 			}
 			// Printout a dismissal message
 			System.out.println("Peer-agent "+getAID().getName()+"terminated.");
-	}
-
-
-	public int[] generateFakeRandomData() {
-		int[] returnArray = new int[chunkSizeX];
-		Random r = new Random();
-		int low = -10;
-		int high = 10;
-		for (int i=0; i<chunkSizeX; i++) {
-			returnArray[i] = r.nextInt(high-low) + low;
-		}
-		return returnArray;
 	}
 
 	public int[] searchData(String data) {
@@ -118,12 +111,14 @@ public class PeerNode extends Agent {
 			}
 		}
 		
+		// loop through the hashmap 
 		Iterator<Map.Entry<BitVector, int[]>> it = hmap.entrySet().iterator();
 		while (it.hasNext()) {
 			Map.Entry<BitVector, int[]> pairs = it.next();
 			int placeHolder[] = (int[])pairs.getValue();
 			
-			if(thresholdT >= hammingDistance(datatoStore, (BitVector)pairs.getKey())) {
+			// store the data if the distance is suitable
+			if(hammingDistance(datatoStore, (BitVector)pairs.getKey())<= thresholdT) {
 				for(int i=0; i<datatoStore.size(); i++ ) {
 					if(datatoStore.get(i)==true) {
 						placeHolder[i]++;
@@ -134,26 +129,14 @@ public class PeerNode extends Agent {
 				}
 				pairs.setValue(placeHolder);
 				storedChunksCounter++;
+				
 			}
-			//System.out.println("address: "+getBitVector((BitVector)pairs.getKey())+" value is: "+ pairs.getValue());
 		}
-		
-		
-		//System.out.println("\nPeer said he was: "+getAID().getName() + " and stored: [" + storedChunksCounter +"/"+chunksNumberN+"] chunks");
-//		Iterator<Map.Entry<BitVector, int[]>> it2 = hmap.entrySet().iterator();
-//		while (it2.hasNext()) {
-//			Map.Entry<BitVector, int[]> pairs2 = it2.next();
-//			int[] counters = (int[])pairs2.getValue();
-//			System.out.print("\naddress: "+getBitVector((BitVector)pairs2.getKey())+" value is: ");
-//			for(int i=0; i<datatoStore.size(); i++ ) {
-//				System.out.print(counters[i]);
-//			} 
-//			System.out.println();
-//		}
+		// return number of stored chunks
 		return storedChunksCounter;
 	}
 
-	public String getBitVector(BitVector v) {
+	public String getBitVectorStr(BitVector v) {
 		String s="";
 		for (int i= 0; i < v.size(); i++) {
 			if (v.get(i)) 
@@ -172,44 +155,63 @@ public class PeerNode extends Agent {
 	}
 	
 	public class ReceiveMessage extends CyclicBehaviour {
-		private String Message_Content;
-		private String SenderName;
 
 		public void action() {
-			int[] searchResult = new int[chunkSizeX];
-			int counterStoredChunks;
+			int[] searchResult = new int[chunksNumberN];
+			int storedChunksCounter;
 
+			//System.out.println(msg.getPerformative());
+
+			// block until message is received...
 			ACLMessage msg = receive();
 			if (msg != null) {
-				counterStoredChunks=0;
-				String command = msg.getContent();
+				String content = msg.getContent();
+				// storedChunksCounter=0;
+				// if REQUEST type, then we received a command to store...
 				if(msg.getPerformative() == ACLMessage.REQUEST) {
-					counterStoredChunks = storeData(command);
-					ACLMessage replyToStore = createMessage(ACLMessage.CONFIRM, counterStoredChunks+"", msg.getSender());
-					send(replyToStore);
+					// execute store and record in how many chunks it was stored successfully
+					storedChunksCounter = storeData(content);
+					// return successfully stored chunks number
+					ACLMessage replyToStoreRequest = createMessage(ACLMessage.CONFIRM, storedChunksCounter+"", msg.getSender());
+					send(replyToStoreRequest);
 				}
+				// if PROPOSE type, then execute search on the proposed bitstring...
 				else if (msg.getPerformative() == ACLMessage.PROPOSE) {
-					//System.out.println("Peer received command to search for: " + command);
-					searchResult = searchData(command);
+					//System.out.println("\n\nBitstring to search for in peer's address space: \n" + content);
+					// collect summed search results in int array
+					searchResult = searchData(content);
+					// send back collected int array to requester peer
 					ACLMessage replyToSearchQuery = createMessage(ACLMessage.INFORM, Arrays.toString(searchResult), msg.getSender());
 					send(replyToSearchQuery);
-					//System.out.println("data to search: "+ command);
 				}
-	
+				else if (msg.getPerformative() == ACLMessage.CANCEL) {
+					//System.out.println("Peer node received request to clear ");
+					
+					Iterator<Map.Entry<BitVector, int[]>> it = hmap.entrySet().iterator();
+					while (it.hasNext()) {
+						Map.Entry<BitVector, int[]> pairs = it.next();
+						int placeHolder[] = (int[])pairs.getValue();
+
+						for(int i=0; i<pairs.getKey().size(); i++ ) {
+								placeHolder[i]=0;
+						}
+						pairs.setValue(placeHolder);
+					}
+				} else if(msg.getPerformative() == ACLMessage.FAILURE) {
+					doDelete();
+				}
 			} else {
 				block();
 			}
 		}
-
-
+		
+		// create message to send to peers
 		private ACLMessage createMessage (int mp, String content, AID dest) {
 			ACLMessage msgACL;
 			msgACL = new ACLMessage(mp);
 			msgACL.setContent(content);
 			msgACL.addReceiver(dest);
-			
 			return msgACL;
 		}
-
 	}
 }

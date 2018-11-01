@@ -8,10 +8,12 @@ import javax.swing.*;
 
 public class PeerNodeGUI extends JFrame{
 		
+		private static final long serialVersionUID = 2L;
+
 		private PeerNodeWithGUI peerAgent;
 		
 		JPanel mainPanel, generatePanel, buttonsPanel;
-		JButton generateButton, storeButton, searchButton;
+		JButton generateButton, storeButton, searchButton, clearTXTBTN, clearDBBTN;
 		JTextField dataTF;
 		JTextArea logTA;
 		JLabel dataLabel;
@@ -33,7 +35,7 @@ public class PeerNodeGUI extends JFrame{
 			BoxLayout boxlayoutX = new BoxLayout(generatePanel, BoxLayout.X_AXIS);
 			generatePanel.setLayout(boxlayoutX);
 			
-			dataTF = new JTextField("data chunk");
+			dataTF = new JTextField("Please enter data, or click GENERATE button...");
 			dataTF.setEditable(true);
 			dataTF.setPreferredSize(new Dimension(400, 40));
 			
@@ -56,19 +58,33 @@ public class PeerNodeGUI extends JFrame{
 			
 			searchButton = new JButton("SEARCH");
 			searchButton.setPreferredSize(new Dimension(200, 40));
-			
 			searchButton.addActionListener(new ActionListener() {
 	            public void actionPerformed(ActionEvent evt) {
-	             	peerAgent.searchData();
+					peerAgent.searchData();
 	            }
 	        });
 			
 			storeButton = new JButton("STORE");
 			storeButton.setPreferredSize(new Dimension(200, 40));
-			
 			storeButton.addActionListener(new ActionListener() {
 	            public void actionPerformed(ActionEvent evt) {
-	             	peerAgent.storeData();
+					peerAgent.storeData();
+	            }
+			});
+
+			clearTXTBTN = new JButton("CLR-TXT");
+			clearTXTBTN.setPreferredSize(new Dimension(100, 40));
+			clearTXTBTN.addActionListener(new ActionListener() {
+	            public void actionPerformed(ActionEvent evt) {
+					logTA.setText("");
+	            }
+			});
+			
+			clearDBBTN = new JButton("CLR-DB");
+			clearDBBTN.setPreferredSize(new Dimension(100, 40));
+			clearDBBTN.addActionListener(new ActionListener() {
+	            public void actionPerformed(ActionEvent evt) {
+					peerAgent.clearData();
 	            }
 	        });
 			
@@ -79,6 +95,9 @@ public class PeerNodeGUI extends JFrame{
 			
 			buttonsPanel.add(searchButton);
 			buttonsPanel.add(storeButton);
+			buttonsPanel.add(clearTXTBTN);
+			buttonsPanel.add(clearDBBTN);
+
 			
 			mainPanel.add(dataLabel);
 			mainPanel.add(generatePanel);
