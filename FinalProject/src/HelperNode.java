@@ -1,6 +1,8 @@
 import jade.core.Agent;
 import jade.core.Profile;
 import jade.core.ProfileImpl;
+import jade.core.behaviours.CyclicBehaviour;
+import jade.core.behaviours.TickerBehaviour;
 import jade.domain.*;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
@@ -8,6 +10,9 @@ import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import jade.wrapper.ControllerException;
 import jade.wrapper.StaleProxyException;
+
+import java.util.ArrayList;
+
 import jade.core.AID;
 import jade.lang.acl.ACLMessage;
 
@@ -17,6 +22,10 @@ public class HelperNode extends Agent {
 	// variable for storing the global GUI
 	private HelperNodeGUI helperNodeGUI;
 	private int peersNumber = 0;
+	public ArrayList<AID> helperList;
+	private String ip = "172.20.10.2";
+	private int localAgentsNum = 2000;
+	
 	
 	//launch agent automatically
 	protected void setup() {
@@ -38,6 +47,20 @@ public class HelperNode extends Agent {
 		catch (FIPAException fe) {
 			fe.printStackTrace();
 		}
+		
+		helperList = new ArrayList<AID>();
+		
+		   addBehaviour(new TickerBehaviour( this, 5000 ) {
+    	protected void onTick() {
+    		refreshActiveAgents();
+           // System.out.println("number of Helper Agents in remote platform: "+helperList.size());
+        }
+    	
+    });
+		
+		
+		
+		
 		
 	}
 	
@@ -67,6 +90,7 @@ public class HelperNode extends Agent {
 		helperNodeGUI.startButton.setEnabled(false);
 		helperNodeGUI.logTA.setText("System started");
 		helperNodeGUI.stopButton.setEnabled(true);
+		int peersNumInt = Integer.parseInt(peersNum);
 	
 		jade.core.Runtime runtime = jade.core.Runtime.instance();
 		Profile profile = new ProfileImpl();
@@ -74,37 +98,119 @@ public class HelperNode extends Agent {
 		AgentContainer container = runtime.createAgentContainer(profile);
         AgentController ag;
         
-        for (int i = 1; i < Integer.parseInt(peersNum); i++) {
-			try {
-				ag = container.createNewAgent("PeerAgent" + (peersNumber+i), "PeerNode", new Object[] {peersNum, chunksNum, chunkSize, threshold});
-				ag.start();
-		
-			} catch (StaleProxyException ex) {
-				ex.printStackTrace();
-			}
-        }
-        
-        try {
-			ag = container.createNewAgent("PeerAgentWithGUI", "PeerNodeWithGUI", new Object[] {peersNum, chunksNum, chunkSize, threshold});
-			ag.start();
-	
-		} catch (StaleProxyException e) {
-			e.printStackTrace();
-		}
+        if(peersNumInt < localAgentsNum) {
+       	 for (int i = 1; i < peersNumInt; i++) {
+    			try {
+    				ag = container.createNewAgent("PeerAgent" +i, "PeerNode", new Object[] {peersNum, chunksNum, chunkSize, threshold});
+    				ag.start();
+    		
+    			} catch (StaleProxyException ex) {
+    				ex.printStackTrace();
+    			}
+            }
+            
+            try {
+    			ag = container.createNewAgent("PeerAgentWithGUI", "PeerNodeWithGUI", new Object[] {peersNum, chunksNum, chunkSize, threshold});
+    			ag.start();
+    	
+    		} catch (StaleProxyException e) {
+    			e.printStackTrace();
+    		}
+       	
+       }
+       else {
+       	for (int i = 1; i < localAgentsNum; i++) {
+    			try {
+    				ag = container.createNewAgent("PeerAgent" + i, "PeerNode", new Object[] {peersNum, chunksNum, chunkSize, threshold});
+    				ag.start();
+    		
+    			} catch (StaleProxyException ex) {
+    				ex.printStackTrace();
+    			}
+            }
+            
+            try {
+    			ag = container.createNewAgent("PeerAgentWithGUI", "PeerNodeWithGUI", new Object[] {peersNum, chunksNum, chunkSize, threshold});
+    			ag.start();
+    	
+    		} catch (StaleProxyException e) {
+    			e.printStackTrace();
+    		}
+            
+            ACLMessage msgACL = new ACLMessage(ACLMessage.CFP);
+  
+					AID remoteAgent = new AID();
+					remoteAgent.setName("Flo@172.20.10.2:1099/JADE");
+					remoteAgent.addAddresses("http://172.20.10.2:7778/acc");  
+					msgACL.setContent((peersNumInt-localAgentsNum)+":"+chunksNum+":"+chunkSize+":"+threshold);
+					msgACL.addReceiver(remoteAgent);
+					send(msgACL);
+				
+    		
+            
+            
+       }
        
         peersNumber += Integer.parseInt(peersNum);
 	}
+	
+	 public void refreshActiveAgents(){
+		 //  System.out.println("scanning remote host");
+		 
+	        //clearing list in GUI
+		    helperList.clear();
+		    
+		 // Update the list of seller agents
+	        DFAgentDescription templateFirst = new DFAgentDescription();
+	        ServiceDescription sdFirst = new ServiceDescription();
+	        sdFirst.setType("peerAgent");
+	        templateFirst.addServices(sdFirst);
+	        try {
+	          DFAgentDescription[] result = DFService.search(this, templateFirst);
+	          for (int i = 0; i < result.length; ++i) {
+	        	  AID agentID = result[i].getName();
+	              helperList.add(agentID);
+	          }
+	        }
+	        catch (FIPAException fe) {
+	          fe.printStackTrace();
+	        }
 
+	        DFAgentDescription template = new DFAgentDescription();
+
+	        AID otherPlatform = new AID();
+	        otherPlatform.setName("df@"+ip+":1099/JADE");
+	        otherPlatform.addAddresses("http://"+ip+":7778/acc");
+
+	        ServiceDescription sd = new ServiceDescription();
+	        sd.setType("peerAgent");
+	        template.addServices(sd);
+
+					
+	        try {
+	            DFAgentDescription[] result = DFService.search(this, otherPlatform, template);
+	            for (int i = 0; i < result.length; i++) {
+	                AID agentID = result[i].getName();
+	                helperList.add(agentID);
+	            }
+	        } catch (FIPAException e) {
+	            e.printStackTrace();
+	        }
+	    }
 
 	public void stopSystem() {
-		ACLMessage msgACL = new ACLMessage(ACLMessage.FAILURE);
+		
 		// broadcast messages to all peers to shut down gracefully
-		for (int i = 1; i < peersNumber; i++) {
-			msgACL.addReceiver(new AID("PeerAgent" + i, AID.ISLOCALNAME));
+		for (int i = 0; i < helperList.size(); i++) {
+			ACLMessage msgACL = new ACLMessage(ACLMessage.FAILURE);
+           //  System.out.println("helperListItem"+i+" "+helperList.get(i));
+			msgACL.addReceiver(helperList.get(i));
+			send(msgACL);
 		}
+		
 		// send the shutdown to the peer with GUI as well
-		msgACL.addReceiver(new AID("PeerAgentWithGUI", AID.ISLOCALNAME));
-		send(msgACL);
+	//	msgACL.addReceiver(new AID("PeerAgentWithGUI", AID.ISLOCALNAME));
+		//send(msgACL);
 
 		// fix buttons
 		helperNodeGUI.stopButton.setEnabled(false);
@@ -113,4 +219,6 @@ public class HelperNode extends Agent {
 
 		peersNumber = 0;
 	}
+	
+
 }

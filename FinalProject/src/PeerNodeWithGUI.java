@@ -42,6 +42,11 @@ public class PeerNodeWithGUI extends Agent{
 	// global counter to measure iteration count...
 	private int searchIterateCounter=0;
 
+	// timers for measuring how long it takes to do stuff
+	long startTime;
+	long stopTime;
+
+
 	
 
 	protected void setup() {
@@ -80,7 +85,7 @@ public class PeerNodeWithGUI extends Agent{
 		DFAgentDescription dfd = new DFAgentDescription();
 		dfd.setName(getAID());
 		ServiceDescription sd = new ServiceDescription();
-		sd.setType("peerAgentGUI");
+		sd.setType("peerAgent");
 		sd.setName(getLocalName()+"-Peer Agent with GUI");
 		dfd.addServices(sd);
 		try {
@@ -185,8 +190,10 @@ public class PeerNodeWithGUI extends Agent{
 					// once iteration is over, send the message 
 					send(msgACL);
 
+					startTime = System.nanoTime();
+
 					// and display a message to confirm
-					peerNodeGUI.logTA.append("\nBroadcasting search request to all peers ... ");
+					peerNodeGUI.logTA.append("\nBroadcasting search request to all peers:");
 				} 
 				else {
 					// pup up an error if genData is empty... (shouldn't happen but still...)
@@ -227,6 +234,8 @@ public class PeerNodeWithGUI extends Agent{
 					}
 					// send message and update the gui
 					send(msgACL);
+
+					startTime = System.nanoTime();
 
 					peerNodeGUI.logTA.append("\nBroadcasting data to store:\n"+genDataString+"\n");
 				} 
@@ -311,7 +320,9 @@ public class PeerNodeWithGUI extends Agent{
 							if (repliesCounter >= peersNum-1) 
 							{
 								// reset counters
-								peerNodeGUI.logTA.append("Successfully stored in ["+storedChunksCounter+"/"+(peersNum-1)*chunksNumberN+"] HardLocations.\n");
+								stopTime = System.nanoTime();
+
+								peerNodeGUI.logTA.append("Successfully stored ["+storedChunksCounter+"/"+(peersNum-1)*chunksNumberN+"] HardLocations in "+(stopTime-startTime)/1000000+" ms.\n");
 								step = 0;
 								repliesCounter = 0;
 								storedChunksCounter = 0;
@@ -341,7 +352,7 @@ public class PeerNodeWithGUI extends Agent{
 					//System.out.print("\nHammingDist1 is: " + hammingDistance(binary, bitStrSearch)+" HammingDist2 is: " + hammingDistance(binary, bitStrSearch));
 
 					// if distance is between 0 and chunksizeX/2 then iterate, but not more than the iteratecounter threshold... 
-					if ((hammingDistance(binary, bitStrSearch) <= (chunkSizeX/2)) && (hammingDistance(binary, bitStrSearch)>0) && (searchIterateCounter < chunksNumberN) ) {
+					if ((hammingDistance(binary, bitStrSearch) <= (chunkSizeX/2)) && (hammingDistance(binary, bitStrSearch)>0) && (searchIterateCounter < 50) ) {
 						// display a "." in the GUI text area to show iteration progress...
 						peerNodeGUI.logTA.append(".");
 
@@ -359,12 +370,32 @@ public class PeerNodeWithGUI extends Agent{
 					}
 					// if the hamming distance is 0, that means we found it in the SDM
 					else if(hammingDistance(binary, bitStrSearch) == 0) {
-						peerNodeGUI.logTA.append(" Positive result, we have your bitstring in SDM\n");
+						
+						peerNodeGUI.logTA.append("\n    ██████╗   ██╗  ██╗\n");
+						peerNodeGUI.logTA.append("   ██╔═══██╗  ██║ ██╔╝\n");
+						peerNodeGUI.logTA.append("   ██║     ██║  █████╔╝\n");
+						peerNodeGUI.logTA.append("   ██║     ██║  ██╔═██╗\n");
+						peerNodeGUI.logTA.append("   ╚██████╔╝ ██║  ██╗\n");
+						peerNodeGUI.logTA.append("    ╚═════╝       ╚═╝  ╚═╝\n");
+										 
+						stopTime = System.nanoTime();
+						peerNodeGUI.logTA.append("(btw, it took "+(stopTime-startTime)/1000000+" ms to find it)\n");
+
+										 
 						bitStrSearch = genData.copy();
 					}
 					// otherwise we could not find it no matter how many iterations were performed...
 					else {
-						peerNodeGUI.logTA.append("\nHouston! We have a problem, bitstring not found in SDM!\n");
+						peerNodeGUI.logTA.append("\n    ███       ██╗    ████╗                ██╗\n");
+						peerNodeGUI.logTA.append("    ████     ██║  ██╔══██╗    ██╗ ██║\n");
+						peerNodeGUI.logTA.append("    ██╔██    ██║ ██║   ██║      ╚═╝██║ \n");
+						peerNodeGUI.logTA.append("    ██║╚██  ██║ ██║   ██║     ██╗ ██║ \n");
+						peerNodeGUI.logTA.append("    ██║ ╚████║  ╚████╔╝       ╚═╝ ╚██╗\n");
+						peerNodeGUI.logTA.append("    ╚═╝    ╚════╝    ╚════╝                  ╚═╝\n");				
+						stopTime = System.nanoTime();
+						peerNodeGUI.logTA.append("(btw, it took "+(stopTime-startTime)/1000000+" ms to search)\n");
+
+																							   
 					}
 					
 					//bitStrSearch = genData.copy;
